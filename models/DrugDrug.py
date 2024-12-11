@@ -1,12 +1,12 @@
 from Model import Model
 
 
-class DrugDrugGraph(Model):
+class DrugDrug(Model):
     """
     A specialized graph class for handling drug-drug interaction data,
     inheriting from the base Model class.
     """
-    NAME = "Drug-Drug Graph"
+    NAME = "Drug-Drug"
 
     def __init__(self):
         super().__init__()
