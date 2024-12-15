@@ -2,7 +2,7 @@ import json
 import networkx as nx
 import matplotlib.pyplot as plt
 from collections import Counter
-
+import os
 
 class Model:
     """
@@ -22,12 +22,14 @@ class Model:
     def panic_if_file_not_loaded(self):
         if not self.file:
             self.panic("Graph file NOT set")
+        if not os.path.exists(self.file):
+            self.panic("Graph file does not exist")
 
     def draw(self):
         if not self.isDrawn:
-            edge_labels = {(u, v): d['weight']
+            edge_labels = {(u, v): f"{d['weight']:.2f}"
                            for u, v, d in self.graph.edges(data=True)}
-            pos = nx.spring_layout(self.graph)
+            pos = nx.spring_layout(self.graph, k=0.15, iterations=20)
             nx.draw(self.graph, pos, with_labels=True, font_weight='bold',
                     node_size=700, node_color='skyblue', font_size=10)
             nx.draw_networkx_edge_labels(
@@ -48,6 +50,6 @@ class Model:
             else:
                 self.graph = nx.Graph()
             self.graph.add_nodes_from(
-                (node["id"], {"label": node["label"]}) for node in data["nodes"])
+                (node["id"], {"label": node["label"], "color": node.get("color", "skyblue")}) for node in data["nodes"])
             self.graph.add_weighted_edges_from([(edge["source"], edge["target"], edge["weight"])
                                                 for edge in data["links"]])

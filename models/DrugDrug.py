@@ -10,5 +10,5 @@ class DrugDrug(Model):
 
     def __init__(self):
         super().__init__()
-        self.set_file_location("../graphs/drug_drug_graph.json")
+        self.set_file_location("graphs/drug_drug_graph.json")
         self.load_graph()

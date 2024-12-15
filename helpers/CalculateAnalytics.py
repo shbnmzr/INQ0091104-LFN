@@ -1,127 +1,205 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-import json
-import os
+from sklearn.preprocessing import MinMaxScaler
+import numpy as np
 
 
-def main():
-    graph_file = "../graphs/drug_drug_graph.json"
-    analyze_and_save_graph_plots(graph_file, plot_dir="../plots", top_k=10, verbose=False)
-
-
-def load_graph_from_json(json_path):
+def get_top_k_nodes(dictionary, k):
     """
-    Loads a graph from a JSON file and creates a NetworkX graph.
+    Retrieves the top k elements from a dictionary based on their values.
 
     Parameters:
-    - json_path (str): Path to the JSON file containing graph data.
+    - dictionary (dict): The dictionary to be processed.
+    - k (int): The number of top elements to retrieve.
 
     Returns:
-    - networkx.Graph: The constructed graph.
+    - list: A list containing the keys of the top k elements.
     """
-    with open(json_path, 'r') as file:
-        data = json.load(file)
-
-    G = nx.Graph() if not data["directed"] else nx.DiGraph()
-
-    for node in data["nodes"]:
-        G.add_node(node["id"], label=node["label"], color=node["color"])
-
-    for link in data["links"]:
-        G.add_edge(link["source"], link["target"], weight=link.get("weight", 1))
-
-    return G
+    sorted_dict = sorted(dictionary.items(), key=lambda x: x[1], reverse=True)
+    return [c[0] for c in sorted_dict[:k]]
 
 
-def analyze_and_save_graph_plots(graph_path, plot_dir="../plots", top_k=10, verbose=False):
+def plot_colored_graph(G, colors_list, title):
     """
-    Loads a graph from JSON, analyzes its structure, and saves metric plots.
+    Plots a colored graph using NetworkX and Matplotlib.
 
     Parameters:
-    - graph_path (str): Path to the JSON graph file.
-    - plot_dir (str): Directory to save plots.
-    - top_k (int): Number of top nodes to analyze for each metric.
-    - verbose (bool): If True, prints detailed analysis.
+    - G (networkx.Graph): The graph to be plotted.
+    - colors_list (list): A list specifying node colors.
+    - title (str): The title of the plot.
 
     Returns:
     - None
     """
-    if not os.path.exists(plot_dir):
-        os.makedirs(plot_dir)
-
-    G = load_graph_from_json(graph_path)
-
-    # Analyze connected components
-    components = (
-        list(nx.connected_components(G)) if not nx.is_directed(G) else list(nx.strongly_connected_components(G))
-    )
-    largest_component = max(components, key=len)
-    subgraph = G.subgraph(largest_component).copy()
-
-    print(f"Graph loaded with {len(G.nodes)} nodes and {len(G.edges)} edges.")
-    print(f"Largest connected component has {len(subgraph.nodes)} nodes and {len(subgraph.edges)} edges.")
-
-    # Metrics
-    metrics = {
-        "Degree Centrality": nx.degree_centrality(subgraph),
-        "Closeness Centrality": nx.closeness_centrality(subgraph),
-        "Betweenness Centrality": nx.betweenness_centrality(subgraph),
-    }
-
-    for metric_name, metric_values in metrics.items():
-        print(f"\nTop {top_k} nodes by {metric_name}:")
-        top_nodes = sorted(metric_values.items(), key=lambda x: x[1], reverse=True)[:top_k]
-        for node, value in top_nodes:
-            label = subgraph.nodes[node].get("label", node)
-            print(f"  Node {node} ({label}): {value:.4f}")
-
-        # Save plot
-        plot_path = os.path.join(plot_dir, f"{metric_name.replace(' ', '_').lower()}.png")
-        save_graph_with_highlights(subgraph, metric_values, top_nodes, metric_name, plot_path, verbose)
+    plt.figure(figsize=(20, 15))
+    pos = nx.spring_layout(G, iterations=100, scale=8.0, k=0.2, seed=37)
+    nx.draw_networkx(G, pos=pos, with_labels=True, font_weight='bold', node_color=colors_list, node_size=500,
+                     font_size=15)
+    plt.title(title)
+    plt.show()
 
 
-def save_graph_with_highlights(G, metric_values, top_nodes, title, save_path, verbose=False):
+def analyze_connected_component(subgraph, component_number):
     """
-    Saves the graph plot with top nodes highlighted to a file.
+    Analyzes a connected component of a graph, extracting both graph-level and node-level features.
 
     Parameters:
-    - G (networkx.Graph): Graph to plot.
-    - metric_values (dict): Node metric values for coloring.
-    - top_nodes (list): Nodes to highlight.
-    - title (str): Title of the plot.
-    - save_path (str): Path to save the plot.
-    - verbose (bool): If True, shows node labels.
+    - subgraph (networkx.Graph): The connected component to be analyzed.
+    - component_number (int): The identifier of the component.
 
     Returns:
     - None
     """
-    top_node_ids = [node for node, _ in top_nodes]
-    node_colors = [
-        "red" if node in top_node_ids else "blue" for node in G.nodes
-    ]
-    node_sizes = [
-        300 if node in top_node_ids else 100 for node in G.nodes
-    ]
+    print(f"\nAnalyzing Connected Component {component_number}:")
+    # print(f"Nodes: {subgraph.nodes()}")
+    # print(f"Edges: {subgraph.edges()}")
 
-    plt.figure(figsize=(12, 8))
-    pos = nx.spring_layout(G, seed=42)
+    if len(subgraph) <= 1:
+        print("Single-node component. Skipping analysis.")
+        return
 
-    nx.draw(
-        G,
-        pos=pos,
-        node_color=node_colors,
-        node_size=node_sizes,
-        with_labels=verbose,
-        labels={node: G.nodes[node]["label"] for node in top_node_ids},
-        font_weight="bold",
-        font_size=8,
-    )
+    diameter = nx.diameter(subgraph)
+    if nx.is_directed(subgraph):
+        avg_out_degree = sum(dict(subgraph.out_degree()).values()) / len(subgraph)
+        avg_in_degree = sum(dict(subgraph.in_degree()).values()) / len(subgraph)
+        print(f"Average Out Degree: {avg_out_degree:.4f}")
+        print(f"Average In Degree: {avg_in_degree:.4f}")
+    else:
+        avg_degree = sum(dict(subgraph.degree()).values()) / len(subgraph)
+        print(f"Average Degree: {avg_degree:.4f}")
 
-    plt.title(title, fontsize=16)
-    plt.savefig(save_path, format="png", dpi=300)
-    plt.close()
-    print(f"Saved plot: {save_path}")
+    avg_clustering_coefficient = nx.average_clustering(subgraph)
+    avg_shortest_path_length = nx.average_shortest_path_length(subgraph)
+
+    print("\nGraph Features:")
+    print(f"Diameter: {diameter}")
+    print(f"Average Clustering Coefficient: {avg_clustering_coefficient:.4f}")
+    print(f"Average Shortest Path Length: {avg_shortest_path_length:.4f}")
+
+    # Node-level features
+    degree_centralities = nx.degree_centrality(subgraph)
+    closeness_centralities = nx.closeness_centrality(subgraph)
+    betweenness_centralities = nx.betweenness_centrality(subgraph)
+    clustering_coefficients = nx.clustering(subgraph)
+
+    print("\nNode Features:")
+    for node in subgraph.nodes:
+        print(f"Node {node}: "
+              f"Degree Centrality: {degree_centralities[node]:.4f}, "
+              f"Closeness Centrality: {closeness_centralities[node]:.4f}, "
+              f"Betweenness Centrality: {betweenness_centralities[node]:.4f}, "
+              f"Clustering Coefficient: {clustering_coefficients[node]:.4f}")
+
+    k = 20
+
+    # Degree centrality
+    top_k_degree_nodes = get_top_k_nodes(degree_centralities, k)
+    print(f"\nTop {k} nodes with highest degree centrality:")
+    for node in top_k_degree_nodes:
+        print(f"Node {node}: "
+              f"Degree Centrality: {degree_centralities[node]:.4f}, "
+              f"Node Label: {subgraph.nodes[node]['label']}")
+    node_colors = ['red' if node in top_k_degree_nodes else 'lightblue' for node in subgraph.nodes]
+    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest degree centrality")
+
+    # Closeness centrality
+    top_k_closeness_nodes = get_top_k_nodes(closeness_centralities, k)
+    print(f"\nTop {k} nodes with highest closeness centrality:")
+    for node in top_k_closeness_nodes:
+        print(f"Node {node}: "
+              f"Closeness Centrality: {closeness_centralities[node]:.4f}, "
+              f"Node Label: {subgraph.nodes[node]['label']}")
+    node_colors = ['red' if node in top_k_closeness_nodes else 'lightblue' for node in subgraph.nodes]
+    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest closeness centrality")
+
+    # Betweenness centrality
+    top_k_betweenness_nodes = get_top_k_nodes(betweenness_centralities, k)
+    print(f"\nTop {k} nodes with highest betweenness centrality:")
+    for node in top_k_betweenness_nodes:
+        print(f"Node {node}: "
+              f"Betweenness Centrality: {betweenness_centralities[node]:.4f}, "
+              f"Node Label: {subgraph.nodes[node]['label']}")
+    node_colors = ['red' if node in top_k_betweenness_nodes else 'lightblue' for node in subgraph.nodes]
+    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest betweenness centrality")
+
+    # Clustering coefficient
+    top_k_clustering_nodes = get_top_k_nodes(clustering_coefficients, k)
+    print(f"\nTop {k} nodes with highest clustering coefficient:")
+    for node in top_k_clustering_nodes:
+        print(f"Node {node}: "
+              f"Clustering Coefficient: {clustering_coefficients[node]:.4f}, "
+              f"Node Label: {subgraph.nodes[node]['label']}")
+    node_colors = ['red' if node in top_k_clustering_nodes else 'lightblue' for node in subgraph.nodes]
+    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest clustering coefficient")
+
+    # Combination feature
+    degree_centralities_normalized = {node: value for node, value in zip(
+        subgraph.nodes,
+        MinMaxScaler().fit_transform(np.array(list(degree_centralities.values())).reshape(-1, 1)).flatten())}
+    closeness_centralities_normalized = {node: value for node, value in zip(
+        subgraph.nodes,
+        MinMaxScaler().fit_transform(np.array(list(closeness_centralities.values())).reshape(-1, 1)).flatten())}
+    betweenness_centralities_normalized = {node: value for node, value in zip(
+        subgraph.nodes,
+        MinMaxScaler().fit_transform(np.array(list(betweenness_centralities.values())).reshape(-1, 1)).flatten())}
+    clustering_coefficients_normalized = {node: value for node, value in zip(
+        subgraph.nodes,
+        MinMaxScaler().fit_transform(np.array(list(clustering_coefficients.values())).reshape(-1, 1)).flatten())}
+
+    degree_centrality_coeff, closeness_centrality_coeff, betweenness_centrality_coeff, clustering_coefficient_coeff = 1, 1.5, 2, 1
+    combination_node_features = {}
+    for node in subgraph.nodes:
+        combination_node_features[node] = (
+                degree_centrality_coeff * degree_centralities_normalized[node] +
+                closeness_centrality_coeff * closeness_centralities_normalized[node] +
+                betweenness_centrality_coeff * betweenness_centralities_normalized[node] +
+                clustering_coefficient_coeff * clustering_coefficients_normalized[node]
+        )
+
+    top_k_combination = get_top_k_nodes(combination_node_features, k)
+    print(f"\nTop {k} nodes with the highest combination of node features:")
+    for node in top_k_combination:
+        print(f"Node {node}: "
+              f"Combination value: {combination_node_features[node]:.4f}, "
+              f"Node Label: {subgraph.nodes[node]['label']}")
+    node_colors = ['red' if node in top_k_combination else 'lightblue' for node in subgraph.nodes]
+    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with the highest combination of node features")
 
 
-if __name__ == "__main__":
-    main()
+def calculate_analytics(model):
+    """
+    Analyzes the connectivity of a graph, identifies connected components, and analyzes each component separately.
+
+    Parameters:
+    - model: An object containing the graph data.
+
+    Returns:
+    - None
+    """
+    print(f"Analyzing {model.NAME} network\n")
+    graph = model.graph
+
+    if nx.is_directed(graph):
+        if nx.is_strongly_connected(graph):
+            print('Graph is strongly connected!')
+            analyze_connected_component(graph, 1)
+        else:
+            print("Graph is not strongly connected.")
+            components = list(nx.strongly_connected_components(graph))
+            print("Connected Components:", components)
+            for i, scc in enumerate(components):
+                subgraph = graph.subgraph(scc)
+                analyze_connected_component(subgraph, i + 1)
+    else:
+        if nx.is_connected(graph):
+            print('Graph is connected!')
+            analyze_connected_component(graph, 1)
+        else:
+            print("Graph is not connected.")
+            components = list(nx.connected_components(graph))
+            print("Connected Components:", components)
+            for i, scc in enumerate(components):
+                subgraph = graph.subgraph(scc)
+                analyze_connected_component(subgraph, i + 1)
+
+    print("\n\n\n------------------------------------------------------------------\n\n\n")
