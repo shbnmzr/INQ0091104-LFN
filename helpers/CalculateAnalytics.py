@@ -1,3 +1,5 @@
+import os
+
 import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
@@ -19,24 +21,33 @@ def get_top_k_nodes(dictionary, k):
     return [c[0] for c in sorted_dict[:k]]
 
 
-def plot_colored_graph(G, colors_list, title):
+def plot_colored_graph(G, colors_list, title, save_dir):
     """
-    Plots a colored graph using NetworkX and Matplotlib.
+    Plots and saves a colored graph using NetworkX and Matplotlib.
 
     Parameters:
     - G (networkx.Graph): The graph to be plotted.
     - colors_list (list): A list specifying node colors.
     - title (str): The title of the plot.
+    - save_dir (str): The directory where the plot should be saved.
 
     Returns:
     - None
     """
+    # Ensure the directory exists
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
     plt.figure(figsize=(20, 15))
     pos = nx.spring_layout(G, iterations=100, scale=8.0, k=0.2, seed=37)
     nx.draw_networkx(G, pos=pos, with_labels=True, font_weight='bold', node_color=colors_list, node_size=500,
                      font_size=15)
     plt.title(title)
-    plt.show()
+
+    # Save the plot as an image
+    plot_path = os.path.join(save_dir, f"{title}.png")
+    plt.savefig(plot_path)
+    plt.close()  # Close the plot to avoid memory issues
 
 
 def analyze_connected_component(subgraph, component_number):
@@ -92,6 +103,7 @@ def analyze_connected_component(subgraph, component_number):
 
     k = 20
 
+
     # Degree centrality
     top_k_degree_nodes = get_top_k_nodes(degree_centralities, k)
     print(f"\nTop {k} nodes with highest degree centrality:")
@@ -100,7 +112,7 @@ def analyze_connected_component(subgraph, component_number):
               f"Degree Centrality: {degree_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}")
     node_colors = ['red' if node in top_k_degree_nodes else 'lightblue' for node in subgraph.nodes]
-    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest degree centrality")
+    plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest degree centrality", save_dir)
 
     # Closeness centrality
     top_k_closeness_nodes = get_top_k_nodes(closeness_centralities, k)
@@ -110,7 +122,7 @@ def analyze_connected_component(subgraph, component_number):
               f"Closeness Centrality: {closeness_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}")
     node_colors = ['red' if node in top_k_closeness_nodes else 'lightblue' for node in subgraph.nodes]
-    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest closeness centrality")
+    plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest closeness centrality", save_dir)
 
     # Betweenness centrality
     top_k_betweenness_nodes = get_top_k_nodes(betweenness_centralities, k)
@@ -120,7 +132,7 @@ def analyze_connected_component(subgraph, component_number):
               f"Betweenness Centrality: {betweenness_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}")
     node_colors = ['red' if node in top_k_betweenness_nodes else 'lightblue' for node in subgraph.nodes]
-    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest betweenness centrality")
+    plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest betweenness centrality", save_dir)
 
     # Clustering coefficient
     top_k_clustering_nodes = get_top_k_nodes(clustering_coefficients, k)
@@ -130,7 +142,7 @@ def analyze_connected_component(subgraph, component_number):
               f"Clustering Coefficient: {clustering_coefficients[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}")
     node_colors = ['red' if node in top_k_clustering_nodes else 'lightblue' for node in subgraph.nodes]
-    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with highest clustering coefficient")
+    plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest clustering coefficient", save_dir)
 
     # Combination feature
     degree_centralities_normalized = {node: value for node, value in zip(
@@ -163,7 +175,7 @@ def analyze_connected_component(subgraph, component_number):
               f"Combination value: {combination_node_features[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}")
     node_colors = ['red' if node in top_k_combination else 'lightblue' for node in subgraph.nodes]
-    plot_colored_graph(subgraph, node_colors, f"\nTop {k} nodes with the highest combination of node features")
+    plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest combination of node features", save_dir)
 
 
 def calculate_analytics(model):
