@@ -80,11 +80,13 @@ def analyze_connected_component(subgraph, component_number, drug_data):
 
     avg_clustering_coefficient = nx.average_clustering(subgraph)
     avg_shortest_path_length = nx.average_shortest_path_length(subgraph)
+    triangles = sum(nx.triangles(subgraph).values()) // 3
 
     print("\nGraph Features:")
     print(f"Diameter: {diameter}")
     print(f"Average Clustering Coefficient: {avg_clustering_coefficient:.4f}")
     print(f"Average Shortest Path Length: {avg_shortest_path_length:.4f}")
+    print(f"Number of closed triangles: {triangles}")
 
     # Node-level features
     degree_centralities = nx.degree_centrality(subgraph)
