@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import networkx as nx
 
 
 def main():
@@ -17,6 +18,7 @@ def extract_graph(raw_data_path, output_path):
         exit(f"Raw data file not found at {raw_data_path}.")
 
     graph_content = build_graph(raw_data_path)
+    graph_content = filter_small_components(graph_content, min_size=3)
 
     # Save the graph to a JSON file
     with open(output_path, "w") as json_file:
@@ -59,6 +61,44 @@ def build_graph(file_path):
             links.append(to_link(keep[drug_a], keep[drug_b]))
 
     return {"directed": False, "nodes": nodes, "links": links}
+
+
+def filter_small_components(graph_content, min_size):
+    """
+    Removes connected components smaller than the specified minimum size.
+
+    Parameters:
+    - graph_content (dict): The graph data in dictionary format (nodes and links).
+    - min_size (int): The minimum size of connected components to retain.
+
+    Returns:
+    - dict: The filtered graph content.
+    """
+    G = nx.Graph()
+
+    # Add nodes and edges to the NetworkX graph
+    node_mapping = {node['id']: node for node in graph_content['nodes']}
+    for node in graph_content['nodes']:
+        G.add_node(node['id'], **node)
+
+    for link in graph_content['links']:
+        G.add_edge(link['source'], link['target'], **link)
+
+    # Filter connected components by size
+    filtered_nodes = []
+    filtered_links = []
+
+    for component in nx.connected_components(G):
+        if len(component) >= min_size:
+            subgraph = G.subgraph(component)
+            filtered_nodes.extend(subgraph.nodes(data=True))
+            filtered_links.extend(subgraph.edges(data=True))
+
+    # Reconstruct the filtered graph content
+    nodes = [{"id": n, **attr} for n, attr in filtered_nodes]
+    links = [{"source": u, "target": v, **attr} for u, v, attr in filtered_links]
+
+    return {"directed": graph_content["directed"], "nodes": nodes, "links": links}
 
 
 def to_node(label, id, color="red"):

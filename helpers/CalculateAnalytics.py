@@ -104,8 +104,7 @@ def analyze_connected_component(subgraph, component_number, drug_data):
               f"Clustering Coefficient: {clustering_coefficients[node]:.4f}, "
               f"Common Name: {common_name}")
 
-    k = 20
-
+    k = 5
 
     # Degree centrality
     top_k_degree_nodes = get_top_k_nodes(degree_centralities, k)
