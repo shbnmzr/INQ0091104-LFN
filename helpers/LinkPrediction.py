@@ -1,6 +1,8 @@
 import networkx as nx
 import random
+import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, average_precision_score, precision_score, recall_score, f1_score
+from collections import defaultdict
 
 
 def split_graph_for_link_prediction(graph, test_fraction=0.1, seed=42):
@@ -97,7 +99,27 @@ def evaluate_predictions(edges, non_edges, scores, threshold=None):
             }
 
 
-def link_prediction_workflow(graph, test_fraction=0.1):
+def plot_comparison(averaged_results):
+    metrics = ["AUC", "Average Precision", "Precision", "Recall", "F1 Score"]
+    methods = list(averaged_results.keys())
+    scores = {metric: [averaged_results[method][metric] for method in methods] for metric in metrics}
+
+    x = range(len(methods))
+    plt.figure(figsize=(12, 8))
+
+    for metric in metrics:
+        plt.plot(x, scores[metric], label=metric, marker='o')
+
+    plt.xticks(x, methods, rotation=45)
+    plt.xlabel("Methods")
+    plt.ylabel("Scores")
+    plt.title("Comparison of Link Prediction Methods")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
     """
     Full workflow for link prediction: edge removal, prediction, and evaluation.
 
@@ -108,37 +130,46 @@ def link_prediction_workflow(graph, test_fraction=0.1):
     Returns:
         None
     """
-    # Step 1: Prepare the graph
-    training_graph, test_edges, test_non_edges = split_graph_for_link_prediction(graph, test_fraction)
-    print(f"Training graph has {training_graph.number_of_edges()} edges.")
-    print(f"Testing with {len(test_edges)} positive and {len(test_non_edges)} negative edges.")
-
-    # Step 2: Define methods and evaluate
+    # Define methods and evaluate
     methods = ["Common Neighbors", "Jaccard Coefficient", "Adamic Adar", "Preferential Attachment"]
-    results = {}
+    aggregated_results = {method: defaultdict(float) for method in methods}
 
-    for method in methods:
-        print(f"\nEvaluating method: {method}")
-        # Step 3: Compute prediction scores
+    for i in range(iterations):
+        print(f"Iteration {i+1}/{iterations}")
+        # Prepare the graph
+        training_graph, test_edges, test_non_edges = split_graph_for_link_prediction(graph, test_fraction)
+        print(f"Training graph has {training_graph.number_of_edges()} edges.")
+        print(f"Testing with {len(test_edges)} positive and {len(test_non_edges)} negative edges.")
         test_combined_edges = test_edges + test_non_edges
-        scores = compute_link_prediction_scores(training_graph, test_combined_edges, method)
+        for method in methods:
+            print(f"\nEvaluating method: {method}")
+            # Compute prediction scores
+            scores = compute_link_prediction_scores(training_graph, test_combined_edges, method)
 
-        # Step 4: Evaluate predictions
-        evaluation = evaluate_predictions(test_edges, test_non_edges, scores)
-        results[method] = evaluation
+            # Evaluate predictions
+            evaluation = evaluate_predictions(test_edges, test_non_edges, scores)
 
-        print(f"  - AUC: {evaluation['AUC']:.4f}")
-        print(f"  - Average Precision: {evaluation['Average Precision']:.4f}")
-        print(f"  - Precision: {evaluation['Precision']:.4f}")
-        print(f"  - Recall: {evaluation['Recall']:.4f}")
-        print(f"  - F1 Score: {evaluation['F1 Score']:.4f}")
+            for metric, value in evaluation.items():
+                aggregated_results[method][metric] += value
 
-    # Step 5: Display comparison
+            print(f"  - AUC: {evaluation['AUC']:.4f}")
+            print(f"  - Average Precision: {evaluation['Average Precision']:.4f}")
+            print(f"  - Precision: {evaluation['Precision']:.4f}")
+            print(f"  - Recall: {evaluation['Recall']:.4f}")
+            print(f"  - F1 Score: {evaluation['F1 Score']:.4f}")
+
+    # Compute averages
+    averaged_results = {
+        method: {metric: value / iterations for metric, value in metrics.items()}
+        for method, metrics in aggregated_results.items()
+    }
+
+    # Display comparison
     print("\nComparison of Link Prediction Methods:")
-    for method, metrics in results.items():
+    for method, metrics in averaged_results.items():
         print(f"{method}:")
-        print(f"  - AUC: {metrics['AUC']:.4f}")
-        print(f"  - Average Precision: {metrics['Average Precision']:.4f}")
-        print(f"  - Precision: {metrics['Precision']:.4f}")
-        print(f"  - Recall: {metrics['Recall']:.4f}")
-        print(f"  - F1 Score: {metrics['F1 Score']:.4f}")
+        for metric, value in metrics.items():
+            print(f"  - {metric}: {value:.4f}")
+
+    # Plot results
+    plot_comparison(averaged_results)
