@@ -4,7 +4,7 @@ import json
 
 
 def main():
-    output_path = "../graphs/drug_target_data.json"
+    output_path = "../graphs/drug_gene_data.json"
     input_data_path = '../raw_data/ChG-Miner_miner-chem-gene.tsv'
 
     # Extract data from the TSV file and save it to JSON

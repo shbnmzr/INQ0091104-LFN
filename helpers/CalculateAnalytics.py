@@ -51,7 +51,7 @@ def plot_colored_graph(G, colors_list, title, save_dir='./plots'):
     plt.close()  # Close the plot to avoid memory issues
 
 
-def analyze_connected_component(subgraph, component_number, drug_data):
+def analyze_connected_component(subgraph, component_number, drug_data, drug_gene_data):
     """
     Analyzes a connected component of a graph, extracting both graph-level and node-level features.
 
@@ -59,6 +59,7 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     - subgraph (networkx.Graph): The connected component to be analyzed.
     - component_number (int): The identifier of the component.
     - drug_data (dict): The dictionary containing drug data with common names.
+    - drug_gene_data (dict): The dictionary containing drug - genes data (drug - targets interactions).
 
     Returns:
     - None
@@ -110,11 +111,14 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     top_k_degree_nodes = get_top_k_nodes(degree_centralities, k)
     print(f"\nTop {k} nodes with highest degree centrality:")
     for node in top_k_degree_nodes:
-        common_name = drug_data.get(subgraph.nodes[node]['label'], {}).get('common_name', 'N/A')
+        drug_label = subgraph.nodes[node]['label']
+        common_name = drug_data.get(drug_label, {}).get('common_name', 'N/A')
+        genes = drug_gene_data.get(drug_label, {}).get('genes', [])
         print(f"Node {node}: "
               f"Degree Centrality: {degree_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}, "
-              f"Common Name: {common_name}")
+              f"Common Name: {common_name}, "
+              f"Target genes: {genes}")
     node_colors = ['red' if node in top_k_degree_nodes else 'lightblue' for node in subgraph.nodes]
     plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest degree centrality")
 
@@ -122,11 +126,14 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     top_k_closeness_nodes = get_top_k_nodes(closeness_centralities, k)
     print(f"\nTop {k} nodes with highest closeness centrality:")
     for node in top_k_closeness_nodes:
-        common_name = drug_data.get(subgraph.nodes[node]['label'], {}).get('common_name', 'N/A')
+        drug_label = subgraph.nodes[node]['label']
+        common_name = drug_data.get(drug_label, {}).get('common_name', 'N/A')
+        genes = drug_gene_data.get(drug_label, {}).get('genes', [])
         print(f"Node {node}: "
               f"Closeness Centrality: {closeness_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}, "
-              f"Common Name: {common_name}")
+              f"Common Name: {common_name}, "
+              f"Target genes: {genes}")
     node_colors = ['red' if node in top_k_closeness_nodes else 'lightblue' for node in subgraph.nodes]
     plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest closeness centrality")
 
@@ -134,11 +141,14 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     top_k_betweenness_nodes = get_top_k_nodes(betweenness_centralities, k)
     print(f"\nTop {k} nodes with highest betweenness centrality:")
     for node in top_k_betweenness_nodes:
-        common_name = drug_data.get(subgraph.nodes[node]['label'], {}).get('common_name', 'N/A')
+        drug_label = subgraph.nodes[node]['label']
+        common_name = drug_data.get(drug_label, {}).get('common_name', 'N/A')
+        genes = drug_gene_data.get(drug_label, {}).get('genes', [])
         print(f"Node {node}: "
               f"Betweenness Centrality: {betweenness_centralities[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}, "
-              f"Common Name: {common_name}")
+              f"Common Name: {common_name}, "
+              f"Target genes: {genes}")
     node_colors = ['red' if node in top_k_betweenness_nodes else 'lightblue' for node in subgraph.nodes]
     plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest betweenness centrality")
 
@@ -146,11 +156,14 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     top_k_clustering_nodes = get_top_k_nodes(clustering_coefficients, k)
     print(f"\nTop {k} nodes with highest clustering coefficient:")
     for node in top_k_clustering_nodes:
-        common_name = drug_data.get(subgraph.nodes[node]['label'], {}).get('common_name', 'N/A')
+        drug_label = subgraph.nodes[node]['label']
+        common_name = drug_data.get(drug_label, {}).get('common_name', 'N/A')
+        genes = drug_gene_data.get(drug_label, {}).get('genes', [])
         print(f"Node {node}: "
               f"Clustering Coefficient: {clustering_coefficients[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}, "
-              f"Common Name: {common_name}")
+              f"Common Name: {common_name}, "
+              f"Target genes: {genes}")
     node_colors = ['red' if node in top_k_clustering_nodes else 'lightblue' for node in subgraph.nodes]
     plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest clustering coefficient")
 
@@ -181,11 +194,14 @@ def analyze_connected_component(subgraph, component_number, drug_data):
     top_k_combination = get_top_k_nodes(combination_node_features, k)
     print(f"\nTop {k} nodes with the highest combination of node features:")
     for node in top_k_combination:
-        common_name = drug_data.get(subgraph.nodes[node]['label'], {}).get('common_name', 'N/A')
+        drug_label = subgraph.nodes[node]['label']
+        common_name = drug_data.get(drug_label, {}).get('common_name', 'N/A')
+        genes = drug_gene_data.get(drug_label, {}).get('genes', [])
         print(f"Node {node}: "
               f"Combination value: {combination_node_features[node]:.4f}, "
               f"Node Label: {subgraph.nodes[node]['label']}, "
-              f"Common Name: {common_name}")
+              f"Common Name: {common_name}, "
+              f"Target genes: {genes}")
     node_colors = ['red' if node in top_k_combination else 'lightblue' for node in subgraph.nodes]
     plot_colored_graph(subgraph, node_colors, f"Top {k} nodes with highest combination of node features")
 
@@ -202,35 +218,36 @@ def calculate_analytics(model):
     """
     print(f"Analyzing {model.NAME} network\n")
     graph = model.graph
-    drug_data = load_drug_data('./graphs/drug_data.json')
+    drug_data = load_json_data('./graphs/drug_data.json')
+    drug_gene_data = load_json_data('./graphs/drug_gene_data.json')
 
     if nx.is_directed(graph):
         if nx.is_strongly_connected(graph):
             print('Graph is strongly connected!')
-            analyze_connected_component(graph, 1, drug_data)
+            analyze_connected_component(graph, 1, drug_data, drug_gene_data)
         else:
             print("Graph is not strongly connected.")
             components = list(nx.strongly_connected_components(graph))
             print("Connected Components:", components)
             for i, scc in enumerate(components):
                 subgraph = graph.subgraph(scc)
-                analyze_connected_component(subgraph, i + 1, drug_data)
+                analyze_connected_component(subgraph, i + 1, drug_data, drug_gene_data)
     else:
         if nx.is_connected(graph):
             print('Graph is connected!')
-            analyze_connected_component(graph, 1, drug_data)
+            analyze_connected_component(graph, 1, drug_data, drug_gene_data)
         else:
             print("Graph is not connected.")
             components = list(nx.connected_components(graph))
             print("Connected Components:", components)
             for i, scc in enumerate(components):
                 subgraph = graph.subgraph(scc)
-                analyze_connected_component(subgraph, i + 1, drug_data)
+                analyze_connected_component(subgraph, i + 1, drug_data, drug_gene_data)
 
     print("\n\n\n------------------------------------------------------------------\n\n\n")
 
 
 # Load drug data from the JSON file
-def load_drug_data(file_path):
+def load_json_data(file_path):
     with open(file_path, 'r') as f:
         return json.load(f)
