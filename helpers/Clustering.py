@@ -1,10 +1,62 @@
 import os
+import json
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from networkx.algorithms.community import girvan_newman, label_propagation_communities
 from community import community_louvain
 from sklearn.cluster import SpectralClustering
+from collections import Counter
+
+
+def load_drug_gene_data(file_path):
+    """Loads drug-gene data from a JSON file."""
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+
+def enrich_graph_with_genes(graph, drug_gene_data):
+    """Adds target genes information as node attributes."""
+    for node in graph.nodes:
+        graph.nodes[node]['genes'] = drug_gene_data.get(graph.nodes[node]['label'], {}).get("genes", [])
+
+
+def largest_connected_component(graph):
+    """Returns the larges connected component of the graph."""
+    lcc = max(nx.connected_components(graph), key=len)
+    return graph.subgraph(lcc).copy()
+
+
+def analyze_cluster_targets(graph, clusters, frequency_threshold=0.25):
+    """
+    Analyzes clusters to find frequent/dominant target genes within each cluster.
+
+    Parameters:
+        graph (networkx.Graph): The input graph to analyze.
+        clusters (list): A list of clusters (lists of nodes).
+        frequency_threshold (float): The minimum frequency (0-1) for a target gene to be considered frequent.
+
+    Returns:
+        dict: A dictionary where keys are cluster indices and values are lists of frequent target genes.
+    """
+    cluster_analysis = {}
+    for idx, cluster in enumerate(clusters):
+        target_counter = Counter()
+        cluster_size = len(cluster)
+
+        # Count target genes in the cluster
+        for node in cluster:
+            target_genes = graph.nodes[node].get('genes', [])
+            target_counter.update(target_genes)
+
+        # Determine dominant target genes based on frequency threshold
+        dominant_targets = [
+                gene for gene, count in target_counter.items()
+                if count / cluster_size >= frequency_threshold
+        ]
+        cluster_analysis[idx] = dominant_targets
+
+    return cluster_analysis
 
 
 def girvan_newman_clustering(graph):
@@ -101,16 +153,27 @@ def visualize_clusters(graph, clusters, title, save_dir='./plots'):
     plt.close()
 
 
-def compare_cluster_sizes(graph):
+def compare_clustering(graph):
     """
-    Compares clustering results from different clustering algorithms and visualizes the results.
+    Compares clustering results (cluster sizes and frequent target genes) from different clustering algorithms and
+    visualizes the results.
 
     Parameters:
         - graph (networkx.Graph): The input graph to be clustered.
+        - drug_gene_data (dict): Drug-gene data loaded from JSON.
 
     Returns:
         None
     """
+    # Enrich the graph with target genes data
+    drug_gene_data_path = "./graphs/drug_gene_data.json"
+    drug_gene_data = load_drug_gene_data(drug_gene_data_path)
+    enrich_graph_with_genes(graph, drug_gene_data)
+
+    # Focus on the largest connected component
+    graph_lcc = largest_connected_component(graph)
+
+    # Perform clustering
     girvan_newman_clusters = girvan_newman_clustering(graph)
     label_propagation_clusters = label_propagation_clustering(graph)
     louvain_clusters = louvain_clustering(graph)
@@ -126,6 +189,10 @@ def compare_cluster_sizes(graph):
     for name, clusters in algorithms:
         cluster_sizes = [len(c) for c in clusters]
         print(f"{name} detected {len(clusters)} clusters with sizes: {cluster_sizes}")
+
+        cluster_targets = analyze_cluster_targets(graph_lcc, clusters)
+        for idx, targets in cluster_targets.items():
+            print(f" Cluster {idx + 1} ({name}): Frequent target proteins -> {targets}")
 
     visualize_clusters(graph, girvan_newman_clusters, "Clusters Detected by Girvan-Newman")
     visualize_clusters(graph, label_propagation_clusters, "Clusters Detected by Label Propagation")

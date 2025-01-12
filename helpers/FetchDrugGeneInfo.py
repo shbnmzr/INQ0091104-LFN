@@ -40,7 +40,7 @@ def extract_drug_target_data(input_data_path, output_path):
 
     # Save results to JSON
     with open(output_path, 'w') as json_file:
-        json.dump(results, json_file, indent = 2)
+        json.dump(results, json_file, indent=2)
 
     print(f"Extracted drug-gene data saved to {output_path}")
 
