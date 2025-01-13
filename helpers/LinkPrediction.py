@@ -10,9 +10,9 @@ def split_graph_for_link_prediction(graph, test_fraction=0.1, seed=42):
     Splits the graph into training and testing sets by removing a fraction of edges.
 
     Parameters:
-        - graph (networkx.Graph): The input graph.
-        - test_fraction (float): Fraction of edges to remove for testing.
-        - seed (int): Random seed for reproducibility.
+        graph (networkx.Graph): The input graph.
+        test_fraction (float): Fraction of edges to remove for testing.
+        seed (int): Random seed for reproducibility.
 
     Returns:
         tuple: (training_graph, test_edges, test_non_edges)
@@ -24,10 +24,11 @@ def split_graph_for_link_prediction(graph, test_fraction=0.1, seed=42):
     num_test_edges = int(len(edges) * test_fraction)
     test_edges = random.sample(edges, num_test_edges)
 
+    # Remove selected edges to create the training graph
     training_graph = graph.copy()
     training_graph.remove_edges_from(test_edges)
 
-    # Generate a set of non-edges for evaluation
+    # Generate a sample of non-edges (pairs of nodes that are not connected)
     non_edges = list(nx.non_edges(training_graph))
     test_non_edges = random.sample(non_edges, num_test_edges)
 
@@ -39,9 +40,9 @@ def compute_link_prediction_scores(graph, edge_list, method):
     Computes scores for the given edge list using the specified method.
 
     Parameters:
-        - graph (networkx.Graph): The input graph.
-        - edge_list (list): List of edges to score.
-        - method (str): The link prediction method.
+        graph (networkx.Graph): The input graph.
+        edge_list (list): List of edges to score.
+        method (str): The link prediction method.
 
     Returns:
         list: Scores for the edges.
@@ -58,7 +59,7 @@ def compute_link_prediction_scores(graph, edge_list, method):
     if method == "Preferential Attachment":
         return [score for _, _, score in nx.preferential_attachment(graph, edge_list)]
 
-    raise ValueError(f"Unknown method: {method}")
+    raise ValueError(f"Unknown link prediction method: {method}")
 
 
 def evaluate_predictions(edges, non_edges, scores, threshold=None):
@@ -66,10 +67,10 @@ def evaluate_predictions(edges, non_edges, scores, threshold=None):
     Evaluates link prediction performance using precision, recall, AUC, and average precision.
 
     Parameters:
-        - edges (list): List of existing edges in the graph.
-        - non_edges (list): List of non-existing edges in the graph.
-        - scores (list): Predicted scores for all edges (existing and non-existing combined).
-        - threshold (float, optional): Threshold for converting scores into binary predictions.
+        edges (list): List of existing edges in the graph.
+        non_edges (list): List of non-existing edges in the graph.
+        scores (list): Predicted scores for all edges (existing and non-existing combined).
+        threshold (float, optional): Threshold for converting scores into binary predictions.
 
     Returns:
         dict: Evaluation metrics (AUC, Average Precision, Precision, Recall, F1 Score).
@@ -79,27 +80,27 @@ def evaluate_predictions(edges, non_edges, scores, threshold=None):
 
     # Use a threshold to create binary predictions
     if threshold is None:
-        # Default threshold: mean of scores
+        # Default threshold is the mean of the scores
         threshold = sum(scores) / len(scores)
 
     y_pred = [1 if score >= threshold else 0 for score in scores]
 
     # Calculate metrics
-    auc = roc_auc_score(y_true, scores)
-    ap = average_precision_score(y_true, scores)
-    precision = precision_score(y_true, y_pred)
-    recall = recall_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred)
-
-    return {"AUC": auc,
-            "Average Precision": ap,
-            "Precision": precision,
-            "Recall": recall,
-            "F1 Score": f1
+    return {"AUC": roc_auc_score(y_true, scores),
+            "Average Precision": average_precision_score(y_true, scores),
+            "Precision": precision_score(y_true, y_pred),
+            "Recall": recall_score(y_true, y_pred),
+            "F1 Score": f1_score(y_true, y_pred)
             }
 
 
 def plot_comparison(averaged_results):
+    """
+    Plots the comparison of link prediction methods based on evaluation metrics.
+
+    Parameters:
+        averaged_results (dict): Dictionary of evaluation metrics for each method/
+    """
     metrics = ["AUC", "Average Precision", "Precision", "Recall", "F1 Score"]
     methods = list(averaged_results.keys())
     scores = {metric: [averaged_results[method][metric] for method in methods] for metric in metrics}
@@ -124,11 +125,9 @@ def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
     Full workflow for link prediction: edge removal, prediction, and evaluation.
 
     Parameters:
-        - graph (networkx.Graph): The input graph.
-        - test_fraction (float): Fraction of edges to remove for testing.
-
-    Returns:
-        None
+        graph (networkx.Graph): The input graph.
+        test_fraction (float): Fraction of edges to remove for testing.
+        iterations (int): Number of iterations to repeat the workflow for averaging results.
     """
     # Define methods and evaluate
     methods = ["Common Neighbors", "Jaccard Coefficient", "Adamic Adar", "Preferential Attachment"]
@@ -136,11 +135,13 @@ def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
 
     for i in range(iterations):
         print(f"Iteration {i+1}/{iterations}")
-        # Prepare the graph
+        # Split graph into training and testing sets
         training_graph, test_edges, test_non_edges = split_graph_for_link_prediction(graph, test_fraction)
         print(f"Training graph has {training_graph.number_of_edges()} edges.")
         print(f"Testing with {len(test_edges)} positive and {len(test_non_edges)} negative edges.")
         test_combined_edges = test_edges + test_non_edges
+
+        # Evaluate each method
         for method in methods:
             print(f"\nEvaluating method: {method}")
             # Compute prediction scores
@@ -149,6 +150,7 @@ def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
             # Evaluate predictions
             evaluation = evaluate_predictions(test_edges, test_non_edges, scores)
 
+            # Aggregate results
             for metric, value in evaluation.items():
                 aggregated_results[method][metric] += value
 
@@ -158,7 +160,7 @@ def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
             print(f"  - Recall: {evaluation['Recall']:.4f}")
             print(f"  - F1 Score: {evaluation['F1 Score']:.4f}")
 
-    # Compute averages
+    # Compute and display average metrics
     averaged_results = {
         method: {metric: value / iterations for metric, value in metrics.items()}
         for method, metrics in aggregated_results.items()

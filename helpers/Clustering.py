@@ -10,31 +10,56 @@ from collections import Counter
 
 
 def load_drug_gene_data(file_path):
-    """Loads drug-gene data from a JSON file."""
+    """
+    Loads drug-gene data from a JSON file.
+
+    Parameters:
+        file_path (str): Path to the JSON file.
+
+    Returns:
+        dict: Mapping of drugs to their target genes.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"{file_path} does not exist!")
     with open(file_path, 'r') as f:
         return json.load(f)
 
 
 def enrich_graph_with_genes(graph, drug_gene_data):
-    """Adds target genes information as node attributes."""
+    """
+    Adds target genes information to graph nodes as attributes.
+
+    Parameters:
+        graph (networkx.Graph): The input graph.
+        drug_gene_data (dict): Drug-to-gene mapping.
+    """
     for node in graph.nodes:
-        graph.nodes[node]['genes'] = drug_gene_data.get(graph.nodes[node]['label'], {}).get("genes", [])
+        drug_label = graph.nodes[node]['label']
+        graph.nodes[node]['genes'] = drug_gene_data.get(drug_label, {}).get("genes", [])
 
 
 def largest_connected_component(graph):
-    """Returns the larges connected component of the graph."""
+    """
+    Extracts the largest connected component of the graph.
+
+    Parameters:
+        graph (networkx.Graph): The input graph.
+
+    Returns:
+        networkx.Graph: Subgraph representing the largest connected component.
+    """
     lcc = max(nx.connected_components(graph), key=len)
     return graph.subgraph(lcc).copy()
 
 
 def analyze_cluster_targets(graph, clusters, frequency_threshold=0.25):
     """
-    Analyzes clusters to find frequent/dominant target genes within each cluster.
+    Identifies frequent target genes among the drugs within each cluster.
 
     Parameters:
         graph (networkx.Graph): The input graph to analyze.
         clusters (list): A list of clusters (lists of nodes).
-        frequency_threshold (float): The minimum frequency (0-1) for a target gene to be considered frequent.
+        frequency_threshold (float): Minimum frequency to consider a gene as frequent.
 
     Returns:
         dict: A dictionary where keys are cluster indices and values are lists of frequent target genes.
@@ -64,7 +89,7 @@ def girvan_newman_clustering(graph):
     Applies the Girvan-Newman algorithm to detect clusters in a graph.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
+        graph (networkx.Graph): The input graph to be clustered.
 
     Returns:
         list: A list of clusters, where each cluster is represented as a sorted list of nodes.
@@ -78,7 +103,7 @@ def label_propagation_clustering(graph):
     Detects communities using the Label Propagation algorithm.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
+        graph (networkx.Graph): The input graph to be clustered.
 
     Returns:
         list: A list of clusters, where each cluster is represented as a sorted list of nodes.
@@ -91,7 +116,7 @@ def louvain_clustering(graph):
     Detects clusters using the Louvain method for modularity maximization.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
+        graph (networkx.Graph): The input graph to be clustered.
 
     Returns:
         list: A list of clusters, where each cluster is represented as a sorted list of nodes.
@@ -108,8 +133,8 @@ def spectral_clustering(graph, n_clusters=5):
     Detects communities using Spectral Clustering on the graph's adjacency matrix.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
-        - n_clusters (int): The number of clusters to be considered (default is 5).
+        graph (networkx.Graph): The input graph to be clustered.
+        n_clusters (int): The number of clusters to be considered (default is 5).
 
     Returns:
         list: A list of clusters, where each cluster is represented as a sorted list of nodes.
@@ -125,14 +150,15 @@ def spectral_clustering(graph, n_clusters=5):
 
 def visualize_clusters(graph, clusters, title, save_dir='./plots'):
     """
-    Visualizes clusters on a graph using Matplotlib.
+    Visualizes clusters in a graph using Matplotlib.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
-        - clusters (list): A list of clusters, where each cluster is represented as a list of nodes.
-        - title (str): The title of the plot.
-        - save_dir (str): The directory where the plot should be saved.
+        graph (networkx.Graph): The input graph to be clustered.
+        clusters (list): A list of clusters, where each cluster is represented as a list of nodes.
+        title (str): The title of the plot.
+        save_dir (str): The directory where the plot should be saved.
     """
+    os.makedirs(save_dir, exist_ok=True)
     pos = nx.spring_layout(graph, iterations=100, scale=8.0, k=0.2, seed=42)
 
     plt.figure(figsize=(16, 12))
@@ -159,13 +185,9 @@ def compare_clustering(graph):
     visualizes the results.
 
     Parameters:
-        - graph (networkx.Graph): The input graph to be clustered.
-        - drug_gene_data (dict): Drug-gene data loaded from JSON.
-
-    Returns:
-        None
+        graph (networkx.Graph): The input graph to be clustered.
     """
-    # Enrich the graph with target genes data
+    # Load and enrich graph with drug-gene data
     drug_gene_data_path = "./graphs/drug_gene_data.json"
     drug_gene_data = load_drug_gene_data(drug_gene_data_path)
     enrich_graph_with_genes(graph, drug_gene_data)
@@ -174,27 +196,20 @@ def compare_clustering(graph):
     graph_lcc = largest_connected_component(graph)
 
     # Perform clustering
-    girvan_newman_clusters = girvan_newman_clustering(graph)
-    label_propagation_clusters = label_propagation_clustering(graph)
-    louvain_clusters = louvain_clustering(graph)
-    spectral_clusters = spectral_clustering(graph)
+    algorithms = {
+        "Girvan-Newman": girvan_newman_clustering,
+        "Label Propagation": label_propagation_clustering,
+        "Louvain": louvain_clustering,
+        "Spectral Clustering": lambda g: spectral_clustering(g, n_clusters=5),
+    }
 
-    algorithms = [
-        ("Girvan-Newman", girvan_newman_clusters),
-        ("Label Propagation", label_propagation_clusters),
-        ("Louvain", louvain_clusters),
-        ("Spectral Clustering", spectral_clusters)
-    ]
-
-    for name, clusters in algorithms:
+    for name, algorithm in algorithms.items():
+        clusters = algorithm(graph_lcc)
         cluster_sizes = [len(c) for c in clusters]
         print(f"{name} detected {len(clusters)} clusters with sizes: {cluster_sizes}")
 
-        cluster_targets = analyze_cluster_targets(graph_lcc, clusters)
-        for idx, targets in cluster_targets.items():
-            print(f" Cluster {idx + 1} ({name}): Frequent target proteins -> {targets}")
+        frequent_genes = analyze_cluster_targets(graph_lcc, clusters)
+        for idx, genes in frequent_genes.items():
+            print(f" Cluster {idx + 1} ({name}): Frequent target genes -> {genes}")
 
-    visualize_clusters(graph, girvan_newman_clusters, "Clusters Detected by Girvan-Newman")
-    visualize_clusters(graph, label_propagation_clusters, "Clusters Detected by Label Propagation")
-    visualize_clusters(graph, louvain_clusters, "Clusters Detected by Louvain Method")
-    visualize_clusters(graph, spectral_clusters, "Clusters Detected by Spectral Clustering")
+        visualize_clusters(graph_lcc, clusters, f"Clusters Detected by {name}")
