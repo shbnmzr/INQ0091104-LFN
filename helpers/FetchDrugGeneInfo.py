@@ -10,18 +10,14 @@ def extract_drug_target_data(input_data_path, output_path):
     Parameters:
         input_data_path (str): Path to the input TSV file containing drug-gene mappings.
         output_path (str): Path to save the output JSON file.
-
-    Raises:
-        FileNotFoundError: If the input file does not exist.
-        FileExistsError: If the output file already exists.
     """
     # Check if input file exists
     if not os.path.exists(input_data_path):
-        raise FileNotFoundError(f"Input file not found at: {input_data_path}")
+        exit(f"Input file not found at: {input_data_path}")
 
     # Prevent overwriting an existing output file
     if os.path.exists(output_path):
-        raise FileExistsError(f"Output file already exists at {output_path}")
+        exit(f"Output file already exists at {output_path}")
 
     results = {}
 

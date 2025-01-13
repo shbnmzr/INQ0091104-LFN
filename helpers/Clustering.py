@@ -20,7 +20,8 @@ def load_drug_gene_data(file_path):
         dict: Mapping of drugs to their target genes.
     """
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"{file_path} does not exist!")
+        exit(f"{file_path} does not exist!")
+
     with open(file_path, 'r') as f:
         return json.load(f)
 

@@ -59,7 +59,7 @@ def compute_link_prediction_scores(graph, edge_list, method):
     if method == "Preferential Attachment":
         return [score for _, _, score in nx.preferential_attachment(graph, edge_list)]
 
-    raise ValueError(f"Unknown link prediction method: {method}")
+    exit(f"Unknown link prediction method: {method}")
 
 
 def evaluate_predictions(edges, non_edges, scores, threshold=None):
