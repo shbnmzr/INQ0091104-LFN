@@ -90,7 +90,8 @@ def evaluate_predictions(edges, non_edges, scores, threshold=None):
             "Average Precision": average_precision_score(y_true, scores),
             "Precision": precision_score(y_true, y_pred),
             "Recall": recall_score(y_true, y_pred),
-            "F1 Score": f1_score(y_true, y_pred)
+            "F1 Score": f1_score(y_true, y_pred),
+            "Accuracy": sum(1 for true, pred in zip(y_true, y_pred) if true == pred) / len(y_true)
             }
 
 
@@ -101,7 +102,7 @@ def plot_comparison(averaged_results):
     Parameters:
         averaged_results (dict): Dictionary of evaluation metrics for each method/
     """
-    metrics = ["AUC", "Average Precision", "Precision", "Recall", "F1 Score"]
+    metrics = ["AUC", "Average Precision", "Precision", "Recall", "F1 Score", "Accuracy"]
     methods = list(averaged_results.keys())
     scores = {metric: [averaged_results[method][metric] for method in methods] for metric in metrics}
 
@@ -159,6 +160,7 @@ def link_prediction_workflow(graph, test_fraction=0.1, iterations=10):
             print(f"  - Precision: {evaluation['Precision']:.4f}")
             print(f"  - Recall: {evaluation['Recall']:.4f}")
             print(f"  - F1 Score: {evaluation['F1 Score']:.4f}")
+            print(f"  - Accuracy: {evaluation['Accuracy']:.4f}")
 
     # Compute and display average metrics
     averaged_results = {
