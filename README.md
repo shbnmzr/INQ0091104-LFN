@@ -129,4 +129,4 @@ The `Clustering.py` module applies community detection algorithms to a graph, co
 
 ### LinkPrediction Module
 
-The `LinkPrediction.py` module implements workflows for predicting missing edges in graphs. It evaluates methods like Common Neighbors, Jaccard Coefficient, and Adamic-Adar using metrics such as AUC and precision.
+The `LinkPrediction.py` module implements workflows for predicting missing edges in graphs. It evaluates methods like **Common Neighbors**, **Jaccard Coefficient**, **Adamic-Adar Index**, and **Preferential Attachment** using metrics such as AUC, Accuracy, Precision, Recall, F1 Score, and Average Precision.
